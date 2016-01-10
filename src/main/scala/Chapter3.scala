@@ -1,17 +1,22 @@
+import scala.annotation.tailrec
+
 /**
  * Created by luvsandondov on 8/10/15.
  */
 
 object Drop {
+  // Get list without the first element:
   def tail[A](as: List[A]): List[A] = as match {
-    case Nil => Nil
+    case Nil   => as
     case x::xs => xs
   }
-  // drop first n elements
+
+  // Drop the first n elements of a given list:
   def drop[A](as: List[A], n: Int): List[A] = n match {
     case 0 => as
     case x => drop(tail(as), x - 1)
   }
+
   /*
   * drop while the predicate is true
   * @param as: list 
@@ -19,10 +24,13 @@ object Drop {
   * */
   def dropWhile[A](as: List[A], predicate: A => Boolean): List[A] = as match {
     case Nil => Nil
-    case x::xs => {
-      if (predicate(x) == true) dropWhile(xs, predicate)
-      else as
-    }
+    case x::xs => if (predicate(x)) dropWhile(xs, predicate) else as
+  }
+  // This version of dropWhile can be called with anonymous function with like:
+  // dropWhile1(List(1,2,3))(x => x > 2)
+  def dropWhile1[A](as: List[A])(f: A => Boolean): List[A] = as match {
+    case Nil => Nil
+    case x::xs => if (f(x)) dropWhile1(xs)(f) else as
   }
 
   def setHead[A](a: A, as: List[A]): List[A] = as match {
@@ -32,34 +40,36 @@ object Drop {
 }
 
 object Fold {
-  // folds List[A] to produce B
-  def foldRight[A, B](as: List[A], z: B)(f: (A,B) => B): B = as match {
-    case Nil   => z
+  // First hit the end of the list before recursing back.
+  def foldRight[A, B](as: List[A], z: B)(f: (A, B) => B): B = as match {
+    case Nil => z
     case x::xs => f(x, foldRight(xs, z)(f))
   }
 
-  /*
-  * implementation of foldLeft
-  * * * */
-  def foldLeft[A, B](as: List[A], z: B)(f: (A, B) => B): B = as match {
+  @tailrec
+  def foldLeft[A, B](as: List[A], z: B)(f: (B, A) => B): B = as match {
     case Nil => z
-    case x::xs => foldLeft(xs, f(x, z))(f)
+    case x::xs => foldLeft(xs, f(z,x))(f)
   }
-  //
-  def foldLeft2[A,B](as: List[A], z: B)(f: (A, B) => B): B =
-    foldRight(reverse(as), z)(f)
 
-  def sum2(ns: List[Int]) =
-    foldRight(ns, 0)(_ + _)
-  def prod2(ns: List[Double]) =
-    foldRight(ns, 1.0)(_ * _)
-
+  // Length of the list using the foldRight.
   def length[A](as: List[A]): Int =
-    foldLeft2(as, 0)((x, y) => y + 1)
+    foldLeft(as, 0)((b: Int, a: A) => 1 + b)
 
-  // reverse a list with fold
   def reverse[A](as: List[A]): List[A] =
-    foldLeft(as, List[A]())((x, l) => x::l)
+    foldLeft(as, List[A]())((z: List[A], a: A) => a::z)
+
+  // Implement foldRight in terms of foldLeft.
+  def foldRight1[A, B](as: List[A], z: B)(f: (B, A) => B): B =
+    foldLeft(as, (b: B) => b)((g, a) => b => g(f(b, a)))(z)
+
+  def concat[A](as: List[A], bs: List[A]): List[A] = as match {
+    case List() => bs
+    case x::xs  => x::concat(xs, bs)
+  }
+
+  def mergeLists[A](ass: List[List[A]]): List[A] =
+    foldLeft(ass, List[A]())((x,y) => concat(x,y))
 }
 
 object Map {
@@ -73,11 +83,15 @@ object Map {
     case x::xs => if (f(x)) x::myFilter(xs)(f) else myFilter(xs)(f)
   }
   
-  // map then foldLeft to produce the myFlatMap
-  def myFlatMap[A, B](as: List[A])(f: A => List[B]): List[B] = {
-    // map
-    val mapped = myMap(as)(f)
-    Fold.foldLeft(mapped, List[B]())((l, lOfl) => lOfl ++ l)
+  def myFlatMap[A, B](as: List[A])(f: A => List[B]): List[B] =
+    Fold.foldLeft(as, List[B]())((bs, a) => Fold.concat(bs, f(a)))
+
+  def myFilterUsingFlatMap[A](as: List[A])(f: A => Boolean): List[A] =
+    myFlatMap(as)((a: A) => if (f(a)) List(a) else List())
+
+  def zipWith[A](as: List[A], bs: List[A])(f: (A, A) => A): List[A] = (as, bs) match {
+    case (List(), List()) => List()
+    case (x::xs, y::ys)   => f(x,y)::zipWith(xs, ys)(f)
   }
 }
 
@@ -88,9 +102,10 @@ case class Branch[A](value: A, left: Tree[A], right: Tree[A]) extends Tree[A]
 object Tree{
   // size of the tree
   def size[A](tree: Tree[A]): Int = tree match {
-    case Leaf(v) => 1
-    case Branch(v, l: A, r: A) => 1 + size(r) + size(l)
+    case Leaf(v: A) => 1
+    case Branch(v: A, l: A, r: A) => 1 + size(r) + size(l)
   }
+
   // maximum element of a tree
   def maximum(tree: Tree[Int]): Int = tree match {
     case Leaf(v) => v
@@ -105,6 +120,11 @@ object Tree{
   def map[A, B](tree: Tree[A], f: A => B): Tree[B] = tree match {
     case Leaf(v) => Leaf(f(v))
     case Branch(v, l, r) => Branch(f(v), map(l, f), map(r, f))
+  }
+
+  def fold[A, B](tree: Tree[A], z: B)(f: (A, B) => B): B = tree match {
+    case Leaf(v)         => f(v, z)
+    case Branch(v, l, r) => f(v, fold(l, fold(r, z)(f))(f))
   }
   
 }

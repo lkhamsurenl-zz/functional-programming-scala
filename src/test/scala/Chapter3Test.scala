@@ -6,12 +6,23 @@ import org.junit.Test
 import org.scalatest.junit.AssertionsForJUnit
 
 class Chapter3Test extends AssertionsForJUnit {
+  @Test def DropTest(): Unit = {
+    val got = Drop.dropWhile1(List(1,2,3))(x => x == 1)
+    assert(got == List(2,3), s"dropWhile(List(1,2,3), x => x == 1): ${got}; want: List(2,3)")
+  }
   @Test def FoldTest() {
+    // Check if the length is 3.
+    assert(3 === Fold.length(List(1,2,3)))
     assert(List(1,2,3) === Fold.reverse(List(3,2,1)))
+    // Merge lists should append list of lists:
+    assert(Fold.mergeLists(List(List(1,2,3), List(4,5,6), List(7,8,9))) == (1 to 9).toList, Fold.mergeLists(List(List(1,2,3), List(4,5,6), List(7,8,9))))
   }
   @Test def MapTest() {
     assert((List(2,3,4)) === Map.myMap(List(1,2,3))(1 + _))
     assert(List(1,2,3,4,5) === Map.myFilter((1 to 10).toList)(_ < 6))
+    // ensure flatMap works as intended:
+    val got = Map.myFlatMap(List(1,2,3))((x: Int) => List(1,2,3).map(_ * x))
+    assert(got == List(1,2,3,2,4,6,3,6,9))
   }
   // No empty tree
   @Test def TreeTest(): Unit = {
