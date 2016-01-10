@@ -37,10 +37,8 @@ class Cafe2 {
   
   def buyCoffees(cc: CreditCard, n: Int): (List[Coffee], Charge) = {
     // create n coffee requests
-    val reqs = List.fill(n)(buyCoffee(cc)).unzip{
-      case (coffees, charges) =>
-        (coffees, charges.reduce((a,b)=> a.combine(b)))
+    List.fill(n)(buyCoffee(cc)).unzip match { case (coffees: List[Coffee], charges: List[Charge]) =>
+        (coffees, charges.reduce((a: Charge, b: Charge)=> a.combine(b)))
     }
   }
-  
 }

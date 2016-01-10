@@ -4,11 +4,11 @@ import scala.annotation.tailrec
  * Created by lkhamsurenl on 9/5/15.
  */
 // Functor is a trait defining a type with one hole in it
-trait Functor[F[_]] {
+trait Functor1[F[_]] {
   def map[A, B](as: F[A])(f: A => B): F[B]
 }
 
-trait Applicitive[F[_]] extends Functor[F] {
+trait Applicitive[F[_]] extends Functor1[F] {
   // primitive combinators
   def map2[A, B, C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C]
   def unit[A](a: => A): F[A]
@@ -38,7 +38,7 @@ trait Applicitive[F[_]] extends Functor[F] {
   }
 }
 
-trait Applicitive2[F[_]] extends Functor[F] {
+trait Applicitive2[F[_]] extends Functor1[F] {
   // primitives
   def unit[A](a: => A): F[A]
   def apply[A, B](fab: F[A => B])(fa: F[A]): F[B]
@@ -46,9 +46,4 @@ trait Applicitive2[F[_]] extends Functor[F] {
   // derived
   def map[A, B](fa: F[A])(f: A => B): F[B] =
     apply(unit[A => B](f))(fa)
-  def map2[A, B, C](fa: F[A], fb: F[B])(f: (A, B) => C): F[C] = {
-    val ff: F[(A, B) => C] = unit(f)
-    apply(ff)((fa, fb))
-  }
-
 }

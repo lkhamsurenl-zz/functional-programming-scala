@@ -4,8 +4,8 @@
 		module="functionalprogramming-build"
 		revision="0.1-SNAPSHOT"
 		status="integration"
-		publication="20150813202107"
-		e:scalaVersion="2.10" e:sbtVersion="0.13"
+		publication="20160110115834"
+		e:sbtVersion="0.13" e:scalaVersion="2.10"
 	>
 		<description>
 		functionalprogramming-build
