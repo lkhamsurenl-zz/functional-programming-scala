@@ -18,26 +18,36 @@ object Chapter5 {
   }
 }
 
-// +A means subtyping works also for the context
+// Empty stream.
+case object Empty extends Stream[Nothing]
+// Non-empty stream. It has an explicit thunk to ensure the non-explicit
+case class Cons[+A](h: () => A, t: () => Stream[A]) extends Stream[A]
+
+// +A means Dog <: Animal -> Stream[Dog] <: Stream[Animal]
 sealed trait Stream[+A] {
+  // Return head if exist
   def headOption: Option[A] = this match {
     case Empty => None
     case Cons(head, tail) => Some(head())
   }
-  // convert to tail with recursive function
+
+  // Convert to list with tail recursive function
   def toList: List[A] = {
     @tailrec
-    def inList(s: Stream[A], lst: List[A]): List[A] = s match {
-      case Empty => lst
-      case Cons(h, tl) => inList(tl(), h()::lst)
+    def inList(s: Stream[A], acc: List[A]): List[A] = s match {
+      case Empty => acc
+      case Cons(h, tl) => inList(tl(), h()::acc)
     }
     // do not forget to reverse the list
     inList(this, List[A]()).reverse
   }
+
+  // Take first elements in stream
   def take(n: Int): Stream[A] = this match {
     case Cons(head, tail) if n > 0 => Cons(head, () => tail().take(n-1))
     case _ => Empty
   }
+
   // drop first n elements of a stream
   def drop(n: Int): Stream[A] = (this, n) match {
     case (Empty, _) => Empty
@@ -57,9 +67,7 @@ sealed trait Stream[+A] {
   
   def forAll(f: A => Boolean): Boolean = this.exists(x => !f(x))
 }
-case object Empty extends Stream[Nothing]
-// has explicit thunk to ensure the non-explicit
-case class Cons[+A](h: () => A, t: () => Stream[A]) extends Stream[A]
+
 
 object Stream {
   def cons[A](hd: => A, tl: => Stream[A]): Stream[A] = {
@@ -67,6 +75,7 @@ object Stream {
     lazy val tail = tl
     Cons(() => head, () => tail)
   }
+
   def empty[A]: Stream[A] = Empty
   def apply[A](as: A*): Stream[A] = 
     if (as.isEmpty) empty else cons(as.head, apply(as.tail: _*))
@@ -86,7 +95,9 @@ object Stream {
     case Some((a,s)) => cons(a, unfold(s)(f))
     case None => empty
   }
+
   def onesByUnfold(): Stream[Int] = unfold(1)(i => Some((1,1)))
+  
   def fibsByUnfold(): Stream[Int] = unfold((0,1)){case (f1, f2) => Some((f1, (f2, f1 + f2)))}
   
   def main(args: Array[String]): Unit = {
