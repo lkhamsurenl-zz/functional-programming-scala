@@ -54,6 +54,7 @@ sealed trait Stream[+A] {
     case (l, 0) => l
     case (Cons(h, tl), num) => tl().drop(num - 1)
   }
+
   // it is lazy function since 2nd part of || would not evaluate if first is true
   def exists(p: A => Boolean): Boolean = this match {
     case Cons(h, tl) => p(h()) || tl().exists(p)
@@ -66,6 +67,7 @@ sealed trait Stream[+A] {
   }
   
   def forAll(f: A => Boolean): Boolean = this.exists(x => !f(x))
+
 }
 
 
@@ -77,6 +79,7 @@ object Stream {
   }
 
   def empty[A]: Stream[A] = Empty
+
   def apply[A](as: A*): Stream[A] = 
     if (as.isEmpty) empty else cons(as.head, apply(as.tail: _*))
   
