@@ -73,3 +73,52 @@ object RNG {
     recInts(count, rng, Nil)
   }
 }
+
+// Type Rand encapsulates function type that takes RNG and returns (A, RNG)
+type Rand[+A] = RNG => (A, RNG)
+object Rand {
+  def unit[A](a: A): Rand[A] = rng => (a, rng)
+
+  def map[A, B](a: Rand[A])(f: A => B): Rand[B] = {
+    rng => {
+      val (value, rng1) = a(rng)
+      (f(value), rng1)
+    }
+  }
+
+  def map2[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] = {
+    rng => {
+      val (a, rngA) = ra(rng)
+      val (b, rngB) = rb(rngA)
+      (f(a, b), rngB)
+    }
+  }
+
+  def nonNegativeEven: Rand[Int] =
+    map(RNG.nonNegativeInt)(i => i - i % 2)
+
+  def double: Rand[Double] =
+    map(RNG.nonNegativeInt)(i => i.toDouble / Int.MaxValue)
+
+  def int: Rand[Int] = _.nextInt
+
+  def both[A, B](ra: Rand[A], rb: Rand[B]): Rand[(A, B)] =
+    map2(ra, rb)((_, _))
+
+  def randIntDouble: Rand[(Int, Double)] = both(int, double)
+  def randDoubleInt: Rand[(Double, Int)] = both(double, int)
+
+  def sequence[A](fs: List[Rand[A]]): Rand[List[A]] =
+    fs.foldLeft(unit(List[A]()))((rl, ra) => map2(ra, rl)(_::_))
+
+  def flatMap[A, B](f: Rand[A])(g: A => Rand[B]): Rand[B] = rng => {
+    val (a, rng1) = f(rng)
+    g(a)(rng1)
+  }
+
+  def mapByFlatMap[A, B](ra: Rand[A])(f: A => B): Rand[B] =
+    flatMap(ra)(a => unit(f(a)))
+
+  def map2ByFlatMap[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
+    flatMap(ra)(a => map(rb)(b => f(a, b)))
+}
